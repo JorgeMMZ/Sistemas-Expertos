@@ -1,0 +1,41 @@
+{
+    "valor": "\u00bfEs un plato principal?",
+    "es_pregunta": true,
+    "si": {
+        "valor": "\u00bfEs redonda?",
+        "es_pregunta": true,
+        "si": {
+            "valor": "pizza",
+            "es_pregunta": false,
+            "si": null,
+            "no": null
+        },
+        "no": {
+            "valor": "\u00bftiene carne?",
+            "es_pregunta": true,
+            "si": {
+                "valor": "albondigas",
+                "es_pregunta": false,
+                "si": null,
+                "no": null
+            },
+            "no": {
+                "valor": "\u00bflleva fideos?",
+                "es_pregunta": true,
+                "si": {
+                    "valor": "espaguetti",
+                    "es_pregunta": false,
+                    "si": null,
+                    "no": null
+                },
+                "no": {
+                    "valor": "sushi",
+                    "es_pregunta": false,
+                    "si": null,
+                    "no": null
+                }
+            }
+        }
+    },
+    "no": null
+}
