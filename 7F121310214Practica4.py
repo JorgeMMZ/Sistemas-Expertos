@@ -1,3 +1,5 @@
+import tkinter as tk
+from tkinter import messagebox, simpledialog
 import random
 
 # Listas de elementos del juego
@@ -21,7 +23,6 @@ while True:
         random.choice(habitaciones),
         random.choice(armas)
     )
-    # Verificar que la escena del crimen no esté en los grupos
     if escena_crimen not in grupos:
         break
 
@@ -31,76 +32,111 @@ def responder_consulta(elemento):
     for personaje, habitacion, arma in grupos:
         if personaje == elemento or habitacion == elemento or arma == elemento:
             encontrado = True
-            #print(f"\nInformación del grupo:")
-            a = 1
-            b = 1
-            c = 1
-            if personaje == elemento:
-                a = 0
-                print(f"{personaje} está en {habitacion} y tiene el {arma}.")
-            if habitacion == elemento:
-                b = 0
-                print(f"En la habitación {habitacion} está {personaje} y tiene el {arma}.")
-            if arma == elemento:
-                c = 0
-                print(f"El {arma} lo tiene {personaje} y está en {habitacion}.")
-            d = 0
-            for objeto in escena_crimen:
-                if elemento == objeto:
-                    d = 1
-            # Verificar la veracidad de cada parte del grupo comparada con la escena del crimen
+            info = ""
             es_persona_correcta = personaje == escena_crimen[0]
             es_habitacion_correcta = habitacion == escena_crimen[1]
             es_arma_correcta = arma == escena_crimen[2]
-            # Mensajes de veracidad para cada componente del grupo
-            if d: 
-                if a: print(f"- {personaje} es {'verdadero' if es_persona_correcta else 'falso'}.")
-                if b: print(f"- La ubicación ({habitacion}) es {'verdadera' if es_habitacion_correcta else 'falsa'}.")
-                if c: print(f"- El arma ({arma}) es {'verdadera' if es_arma_correcta else 'falsa'}.")
-            else:
-                if a: print(f"- {personaje} es {'falso' if es_persona_correcta else 'veridico'}.")
-                if b: print(f"- La ubicación ({habitacion}) es {'falso' if es_habitacion_correcta else 'veridico'}.")
-                if c: print(f"- El arma ({arma}) es {'falso' if es_arma_correcta else 'veridica'}.")
+            a = 1
+            b = 1
+            c = 1
+            d = 1
+            for objeto in escena_crimen:
+                if elemento == objeto:
+                    d = 0
+            if personaje == elemento:
+                info += f"{personaje} está en {habitacion} y tiene el {arma}.\n"
+                a = 0
+            if habitacion == elemento:
+                info += f"En la habitación {habitacion} está {personaje} y tiene el {arma}.\n"
+                b = 0
+            if arma == elemento:
+                info += f"El {arma} lo tiene {personaje} y está en {habitacion}.\n"
+                c = 0
+                
+            if a: info += f"- {personaje} es {'verdadero' if (d^es_persona_correcta) else 'falso'}.\n"
+            if b: info += f"- La ubicación ({habitacion}) es {'verdadera' if (d^es_habitacion_correcta) else 'falsa'}.\n"
+            if c: info += f"- El arma ({arma}) es {'verdadera' if (d^es_arma_correcta) else 'falsa'}.\n"
+            messagebox.showinfo("Resultado de la Consulta", info)
             return True
-    
-    # Si no se encuentra el elemento en ninguno de los grupos
     if not encontrado:
-        print("Elemento desconocido, intenta nuevamente.")
+        messagebox.showinfo("Elemento Desconocido", "Elemento desconocido, intenta nuevamente.")
         return False
 
-# Simulación del juego
-print("\n--- Bienvenido al juego de Clue ---")
-print("Puedes preguntar sobre un personaje, una habitación o un arma para saber dónde están y si la información es verídica.")
-print("Tienes un máximo de 5 inspecciones para descubrir pistas.")
-
-# Contador de inspecciones permitidas
-inspecciones_restantes = 5
-
-# Bucle para consultas del usuario
-while inspecciones_restantes > 0:
-    consulta = input("\n¿Qué elemento deseas consultar? (escribe 'salir' para terminar): ").strip().capitalize()
-    
-    if consulta.lower() == "salir":
-        print("Gracias por jugar. ¡Hasta la próxima!")
-        break
-    
-    # Realizar la consulta y disminuir el contador sólo si es válida
-    if responder_consulta(consulta):
+# Función para manejar la consulta de un elemento desde el botón
+def realizar_consulta(elemento):
+    global inspecciones_restantes
+    if responder_consulta(elemento):
         inspecciones_restantes -= 1
-        print(f"Inspecciones restantes: {inspecciones_restantes}")
-    
+        lbl_inspecciones.config(text=f"Inspecciones restantes: {inspecciones_restantes}")
     if inspecciones_restantes == 0:
-        print("\nSe han agotado tus inspecciones. ¡Es hora de adivinar la escena del crimen!")
-        
-        # Solicitar al usuario que adivine la escena del crimen
-        sospechoso = input("¿Quién crees que es el culpable?: ").strip().capitalize()
-        lugar = input("¿En qué habitación ocurrió el crimen?: ").strip().capitalize()
-        arma = input("¿Con qué arma se cometió el crimen?: ").strip().capitalize()
-        
-        # Comprobar si el usuario adivinó correctamente
+        adivinar_escena()
+
+# Función para permitir al usuario adivinar la escena del crimen
+def adivinar_escena():
+    # Ventana de selección de escena del crimen
+    ventana_adivinanza = tk.Toplevel(root)
+    ventana_adivinanza.title("Adivina la Escena del Crimen")
+    
+    # Menús desplegables para elegir sospechoso, habitación y arma
+    tk.Label(ventana_adivinanza, text="Selecciona el sospechoso:").pack(pady=5)
+    sospechoso_var = tk.StringVar(value=personajes[0])
+    tk.OptionMenu(ventana_adivinanza, sospechoso_var, *personajes).pack()
+    
+    tk.Label(ventana_adivinanza, text="Selecciona la habitación:").pack(pady=5)
+    habitacion_var = tk.StringVar(value=habitaciones[0])
+    tk.OptionMenu(ventana_adivinanza, habitacion_var, *habitaciones).pack()
+    
+    tk.Label(ventana_adivinanza, text="Selecciona el arma:").pack(pady=5)
+    arma_var = tk.StringVar(value=armas[0])
+    tk.OptionMenu(ventana_adivinanza, arma_var, *armas).pack()
+    
+    # Botón para confirmar la adivinanza
+    def confirmar_adivinanza():
+        sospechoso = sospechoso_var.get()
+        lugar = habitacion_var.get()
+        arma = arma_var.get()
         if (sospechoso, lugar, arma) == escena_crimen:
-            print("\n¡Felicidades! Has acertado en todos los elementos de la escena del crimen.")
+            messagebox.showinfo("Resultado", "¡Felicidades! Has acertado en todos los elementos de la escena del crimen.")
         else:
-            print("\nBuen intento, pero no acertaste en todos los elementos.")
-            print(f"La escena correcta era: {escena_crimen[0]}, en {escena_crimen[1]} con {escena_crimen[2]}.")
-        break
+            mensaje = (f"Buen intento, pero no acertaste en todos los elementos.\n"
+                       f"La escena correcta era: {escena_crimen[0]}, en {escena_crimen[1]} con {escena_crimen[2]}.")
+            messagebox.showinfo("Resultado", mensaje)
+        root.destroy()
+    
+    tk.Button(ventana_adivinanza, text="Confirmar Adivinanza", command=confirmar_adivinanza).pack(pady=10)
+
+# Configuración de la ventana principal de tkinter
+root = tk.Tk()
+root.title("Juego de Clue")
+root.geometry("600x400")
+
+# Etiqueta de instrucciones
+lbl_instrucciones = tk.Label(root, text="Selecciona un elemento para consultar:", font=("Arial", 12))
+lbl_instrucciones.pack(pady=10)
+
+# Contador de inspecciones restantes
+inspecciones_restantes = 5
+lbl_inspecciones = tk.Label(root, text=f"Inspecciones restantes: {inspecciones_restantes}", font=("Arial", 10))
+lbl_inspecciones.pack(pady=5)
+
+# Crear botones para cada personaje, habitación y arma
+frame_botones = tk.Frame(root)
+frame_botones.pack(pady=10)
+
+# Crear y organizar los botones para personajes
+for personaje in personajes:
+    btn_personaje = tk.Button(frame_botones, text=personaje, command=lambda p=personaje: realizar_consulta(p))
+    btn_personaje.grid(row=0, column=personajes.index(personaje), padx=5, pady=5)
+
+# Crear y organizar los botones para habitaciones
+for habitacion in habitaciones:
+    btn_habitacion = tk.Button(frame_botones, text=habitacion, command=lambda h=habitacion: realizar_consulta(h))
+    btn_habitacion.grid(row=1, column=habitaciones.index(habitacion), padx=5, pady=5)
+
+# Crear y organizar los botones para armas
+for arma in armas:
+    btn_arma = tk.Button(frame_botones, text=arma, command=lambda a=arma: realizar_consulta(a))
+    btn_arma.grid(row=2, column=armas.index(arma), padx=5, pady=5)
+
+# Iniciar la aplicación tkinter
+root.mainloop()
