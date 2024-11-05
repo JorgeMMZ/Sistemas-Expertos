@@ -1,15 +1,23 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sun Nov  3 20:49:20 2024
+
+@author: Ghost
+"""
+
 import json
 import os
+import tkinter as tk
+from tkinter import simpledialog, messagebox
 
 class Nodo:
     def __init__(self, valor, es_pregunta=True):
-        self.valor = valor  # Valor del nodo (puede ser una pregunta o una comida)
-        self.es_pregunta = es_pregunta  # True si es pregunta, False si es comida
-        self.si = None  # Rama para respuesta "sí"
-        self.no = None  # Rama para respuesta "no"
+        self.valor = valor
+        self.es_pregunta = es_pregunta
+        self.si = None
+        self.no = None
 
     def a_dict(self):
-        # Convierte el nodo a un diccionario para guardarlo en JSON
         nodo_dict = {
             "valor": self.valor,
             "es_pregunta": self.es_pregunta,
@@ -20,7 +28,6 @@ class Nodo:
 
     @classmethod
     def desde_dict(cls, data):
-        # Convierte un diccionario a un nodo
         nodo = cls(data["valor"], data["es_pregunta"])
         nodo.si = cls.desde_dict(data["si"]) if data["si"] else None
         nodo.no = cls.desde_dict(data["no"]) if data["no"] else None
@@ -29,85 +36,103 @@ class Nodo:
 class AdivinaComida:
     def __init__(self, archivo_json="conocimientocomida.json"):
         self.archivo_json = archivo_json
-        # Cargar el árbol desde el archivo o crear un árbol nuevo si el archivo no existe
         self.raiz = self.cargar_conocimiento()
+        self.nodo_actual = self.raiz
 
     def cargar_conocimiento(self):
-        # Intenta cargar el árbol desde el archivo JSON
         if os.path.exists(self.archivo_json):
             with open(self.archivo_json, "r") as archivo:
                 data = json.load(archivo)
                 return Nodo.desde_dict(data)
-        # Si no existe el archivo, crea un árbol inicial
         nodo_raiz = Nodo("¿Es un plato principal?", es_pregunta=True)
         nodo_raiz.si = Nodo("pizza", es_pregunta=False)
+        nodo_raiz.no = Nodo("Arroz con leche", es_pregunta=False)
+        
         return nodo_raiz
 
     def guardar_conocimiento(self):
-        # Guarda el árbol en el archivo JSON
         with open(self.archivo_json, "w") as archivo:
             json.dump(self.raiz.a_dict(), archivo, indent=4)
 
-    def jugar(self):
-        nodo_actual = self.raiz
-        while nodo_actual.es_pregunta:
-            respuesta = input(f"{nodo_actual.valor} (sí/no): ").strip().lower()
-            if respuesta == "si":
-                if nodo_actual.si:
-                    nodo_actual = nodo_actual.si
-                else:
-                    print("No tengo más información. Agreguemos nueva comida.")
-                    self.agregar_comida(nodo_actual, respuesta=True)
-                    return
-            elif respuesta == "no":
-                if nodo_actual.no:
-                    nodo_actual = nodo_actual.no
-                else:
-                    print("No tengo más información. Agreguemos nueva comida.")
-                    self.agregar_comida(nodo_actual, respuesta=False)
-                    return
-            else:
-                print("Respuesta no válida. Por favor, responde 'si' o 'no'.")
+    def jugar(self, root):
+        self.nodo_actual = self.raiz
+        self.mostrar_pregunta(root)
 
-        # Llegamos a una comida, intentamos adivinar
-        respuesta_final = input(f"¿Es {nodo_actual.valor}? (si/no): ").strip().lower()
-        if respuesta_final == "si":
-            print("¡He adivinado!")
+    def mostrar_pregunta(self, root):
+        if self.nodo_actual.es_pregunta:
+            pregunta_label.config(text=self.nodo_actual.valor)
+            respuesta_si_btn.config(command=lambda: self.procesar_respuesta(True, root))
+            respuesta_no_btn.config(command=lambda: self.procesar_respuesta(False, root))
         else:
-            print("No adiviné. Vamos a agregar esta comida a mi base de conocimientos.")
-            self.agregar_comida(nodo_actual, respuesta=False)
+            pregunta_label.config(text=f"¿Es {self.nodo_actual.valor}?")
+            respuesta_si_btn.config(command=lambda: self.adivinado(root))
+            respuesta_no_btn.config(command=lambda: self.agregar_nueva_comida(root))
 
-    def agregar_comida(self, nodo, respuesta):
-        nueva_comida = input("¿En qué comida estabas pensando?: ").strip()
-        nueva_pregunta = input(f"Dame una pregunta para diferenciar '{nueva_comida}' de '{nodo.valor}': ").strip()
+    def procesar_respuesta(self, respuesta, root):
+        if respuesta:
+            if self.nodo_actual.si:
+                self.nodo_actual = self.nodo_actual.si
+            else:
+                self.agregar_nueva_comida(root)
+                return
+        else:
+            if self.nodo_actual.no:
+                self.nodo_actual = self.nodo_actual.no
+            else:
+                self.agregar_nueva_comida(root)
+                return
+        self.mostrar_pregunta(root)
 
-        # Crear nuevos nodos para la nueva comida y la pregunta
+    def adivinado(self, root):
+        messagebox.showinfo("¡Adiviné!", "¡He adivinado!")
+        if messagebox.askyesno("Nuevo Juego", "¿Quieres jugar otra vez?"):
+            self.jugar(root)
+        else:
+            root.destroy()
+
+    def agregar_nueva_comida(self, root):
+        nueva_comida = simpledialog.askstring("Nueva Comida", "¿En qué comida estabas pensando?")
+        if not nueva_comida:
+            return
+        nueva_pregunta = simpledialog.askstring("Nueva Pregunta", f"Dame una pregunta para diferenciar '{nueva_comida}' de '{self.nodo_actual.valor}'")
+        if not nueva_pregunta:
+            return
+
         nodo_nueva_comida = Nodo(nueva_comida, es_pregunta=False)
         nodo_pregunta = Nodo(nueva_pregunta, es_pregunta=True)
 
-        # Configurar las ramas según la respuesta
-        if respuesta:
+        if messagebox.askyesno("Confirmación", f"¿La respuesta a la pregunta para '{nueva_comida}' sería 'sí'?"):
             nodo_pregunta.si = nodo_nueva_comida
-            nodo_pregunta.no = Nodo(nodo.valor, es_pregunta=False)
+            nodo_pregunta.no = Nodo(self.nodo_actual.valor, es_pregunta=False)
         else:
-            nodo_pregunta.si = Nodo(nodo.valor, es_pregunta=False)
+            nodo_pregunta.si = Nodo(self.nodo_actual.valor, es_pregunta=False)
             nodo_pregunta.no = nodo_nueva_comida
 
-        # Reemplazar el nodo actual con la nueva pregunta
-        nodo.valor = nodo_pregunta.valor
-        nodo.es_pregunta = True
-        nodo.si = nodo_pregunta.si
-        nodo.no = nodo_pregunta.no
+        self.nodo_actual.valor = nodo_pregunta.valor
+        self.nodo_actual.es_pregunta = True
+        self.nodo_actual.si = nodo_pregunta.si
+        self.nodo_actual.no = nodo_pregunta.no
 
-        # Guardar el nuevo conocimiento en el archivo JSON
         self.guardar_conocimiento()
+        messagebox.showinfo("Nuevo Conocimiento", f"{nueva_comida} ha sido agregado a la base de conocimientos.")
+        self.jugar(root)
 
-# Ejecución del juego
+# Configuración de la interfaz gráfica
+root = tk.Tk()
+root.title("Adivina la Comida")
+root.geometry("400x300")
+
+
 juego = AdivinaComida()
-while True:
-    print("\n--- Nuevo Juego de Adivina la Comida ---")
-    juego.jugar()
-    continuar = input("¿Quieres jugar otra vez? (si/no): ").strip().lower()
-    if continuar != "si":
-        print("¡Gracias por jugar!")
-        break
+pregunta_label = tk.Label(root, text="Piensa en una comida y responde las preguntas", font=("Arial", 12), wraplength=300)
+pregunta_label.pack(pady=20)
+
+respuesta_si_btn = tk.Button(root, text="Sí", width=10)
+respuesta_si_btn.pack(side=tk.LEFT, padx=20, pady=10)
+
+respuesta_no_btn = tk.Button(root, text="No", width=10)
+respuesta_no_btn.pack(side=tk.RIGHT, padx=20, pady=10)
+
+juego.jugar(root)
+
+root.mainloop()
